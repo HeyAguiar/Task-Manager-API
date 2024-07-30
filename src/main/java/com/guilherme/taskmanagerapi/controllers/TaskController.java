@@ -1,6 +1,8 @@
 package com.guilherme.taskmanagerapi.controllers;
 
 import java.net.URI;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,15 +23,19 @@ import com.guilherme.taskmanagerapi.dtos.TaskDTO;
 import com.guilherme.taskmanagerapi.services.TaskService;
 import jakarta.validation.Valid;
 
+import javax.sql.DataSource;
+
 @RestController
 @RequestMapping("/tasks")
 public class TaskController {
 
 	private final TaskService service;
+	private final DataSource dataSource;
 
 	@Autowired
-	public TaskController(TaskService service) {
+	public TaskController(TaskService service, DataSource dataSource) {
 		this.service = service;
+		this.dataSource = dataSource;
 	}
 
 	@PostMapping
@@ -60,7 +66,7 @@ public class TaskController {
     	if (taskOptional.isEmpty()) {
     		return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     	}
-    	service.deleteById(String.valueOf(taskOptional.get()));
+    	service.deleteById(String.valueOf(id));
     	return ResponseEntity.noContent().build();
     }
     
@@ -75,4 +81,13 @@ public class TaskController {
     	service.saveTask(task);
     	return ResponseEntity.ok(task);
     }
-}
+
+	@GetMapping("/healthcheck")
+		public ResponseEntity<String> checkDataBaseConnection() {
+			try (Connection connection = dataSource.getConnection()) {
+				return ResponseEntity.ok("Conexão estabelecida com sucesso!");
+			} catch (SQLException e) {
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Falha na conexão com o banco de dados");
+			}
+		}
+	}
